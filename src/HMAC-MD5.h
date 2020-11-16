@@ -1,20 +1,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+// byte 字节 : 8位
+// word 字   : 32位
 typedef unsigned char byte;
 typedef unsigned word;
 
 /**
  * Input 
- * - msg : original message  
- * - n   : length of msg
+ * - msg   : 原始的信息  
+ * - n     : 信息的字节长度
  * Output
- * - words : padded and converted words
- * - N : length of words
+ * - words : 填充至 64 字节整数倍大小的字的数组
+ * - N     : words 的长度（单位：字）
  */ 
 void msgToWords(byte *msg, int n, word **words, int *N)
 {
-    // pad the msg
+    /* 填充数据至块大小的整数倍 */
     int paddedBlockNumber = 1 + (n + 8) / 64;
     int paddedByteLen = paddedBlockNumber * 64; 
     byte *paddedMsg = (byte *)malloc(paddedByteLen);
@@ -23,11 +25,13 @@ void msgToWords(byte *msg, int n, word **words, int *N)
     paddedMsg[n] = (byte)0x80;
     for(int i = n + 1; i < paddedByteLen - 8; i++) paddedMsg[i] = 0;
 
-    // pad originalSize in the last 2 words
+    /* 将原始数据长度填充至最后两个字 */
+    // 直接 memcpy 可一定程度上避免大小端问题
     unsigned long long originLenInBits = (unsigned long long)n * 8; 
     memcpy(paddedMsg + paddedByteLen - 8, &originLenInBits, 8);
     
-    // convert from bytes to words
+    /* 从字节(byte)的数组转换为字(word)的数组 */
+    // 不进行这一转换可避免大小段问题
     int wordsLen = paddedByteLen / 4;
     *N = wordsLen;
     *words = (word *)malloc(paddedByteLen);
@@ -36,6 +40,7 @@ void msgToWords(byte *msg, int n, word **words, int *N)
         word thisWord = 0;
         for(int j = i; j <= i + 3; j++)
         {
+            // shiftBits 的计算体现小端模式
             int shiftBits = (j - i) * 8;
             thisWord += ((word)paddedMsg[j]) << shiftBits;
         }
@@ -48,12 +53,15 @@ void msgToWords(byte *msg, int n, word **words, int *N)
 
 //////////////////////////////////////////////////////////////////
 
+// S[i][j] 表示在第 i 轮中，第 j 次运算中循环左移的位数
 word S[4][16] = {
     { 7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22 },
     { 5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20 },
     { 4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23 },
     { 6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21 }};
 
+// T 中的数据可由 sin 函数计算出
+// T[i][j] 表示在第 i 轮中，第 j 次运算中使用的数值
 word T[4][16] = {
     {
         0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 
@@ -77,7 +85,10 @@ word T[4][16] = {
         0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
     }};
 
+// X 用于在处理每一个块时暂存这个块的 16 个 word
 word X[16];
+
+// K[i][j] 表示在第 i 轮中，第 j 次运算中 X 的下标
 word K[4][16] = {
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
     { 1, 6, 11, 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12 },
@@ -108,10 +119,9 @@ void round4(word *a, word b, word c, word d, word k, word s, word i)
 { *a = b + leftRotate((*a + I(b,c,d) + X[K[3][k]] + T[3][i]), S[3][s]);} 
 
 
-/** MD5 receives registers and padded words, calculates the outputs in registers. 
- * A,B,C,D : 4 registers
- * words : padded message
- * N : length of words, a multiple of 16 (16 words for a block)
+/** 
+ * MD5 接收转换后的字的数组 words 和元素个数 N,
+ * 经过每块 4 轮计算后，结果被写入传入的 4 个寄存器
  */ 
 void processInBlocks(word *A, word *B, word *C, word *D, word *words, int N)
 {
@@ -207,7 +217,11 @@ void processInBlocks(word *A, word *B, word *C, word *D, word *words, int N)
     }
 }
 
-// result in hexadecimal representation of byte stream
+/**
+ * 此函数是 msgToWords 与 processInBlocks 的综合
+ * 输入需要加密的字符串 msg
+ * 输出 msg 的摘要的十六进制形式的字符串
+ */
 byte* MD5(byte *msg)
 {
     word *wordBuffer;
@@ -235,7 +249,12 @@ byte* MD5(byte *msg)
     return ans;
 }
 
-// result in original byte stream
+/**
+ * 此函数亦是 msgToWords 与 processInBlocks 的综合
+ * 输入需要加密的字符串 msg
+ * 输出 msg 的摘要的原始字节流
+ * (一般不要用此函数)
+ */
 byte* MD_5(byte *msg)
 {
     word *wordBuffer;
@@ -263,8 +282,11 @@ byte* MD_5(byte *msg)
     return ans;
 }
 
-
-
+/**
+ * 使用 MD5 作为散列函数的 HMAC 算法
+ * 输入加密密钥 key 和需要认证的消息 msg
+ * 输出消息认证码
+ */
 byte* HMAC_MD5(byte *key, byte *msg)
 {
     int blockSize = 64;
@@ -284,19 +306,21 @@ byte* HMAC_MD5(byte *key, byte *msg)
         _key = tKey;
     }
 
-    /*culc ipad*/
+    /*计算 ipad*/
     byte *ipad = (byte *)malloc(blockSize + 1);
     for(int i = 0; i < blockSize; i++)
         ipad[i] = 0x36 ^ _key[i];
     ipad[blockSize] = '\0';
 
-    /*culc opad*/   
+    /*计算 opad*/   
     byte *opad = (byte *)malloc(blockSize + 1);
     for(int i = 0; i < blockSize; i++)
         opad[i] = 0x5c ^ _key[i];
     opad[blockSize] = '\0';
 
     /*result = MD5(opad ∥ MD5(ipad ∥ message))*/
+
+    // 1. t1 = MD5(ipad ∥ message)
     int len1 = strlen(ipad) + strlen(msg);
     byte *t1 = (byte *)malloc(len1 + 1);
     t1[0] = '\0';
@@ -304,12 +328,17 @@ byte* HMAC_MD5(byte *key, byte *msg)
     strcat(t1, msg);
     t1 = MD_5(t1);
 
-    byte *t2 = (byte *)malloc(81);
+    // 2. t2 = opad ∥ t1
+    int len2 = strlen(opad) + strlen(t1);
+    byte *t2 = (byte *)malloc(len2);
     t2[0] = '\0';
     strcat(t2, opad);
     strcat(t2, t1);
-    byte *ans = MD5(t2);
 
+    // 3. ans = MD5(t2)
+    byte *ans = MD5(t2);
+    
+    // 别忘了释放空间
     free(_key);
     free(ipad);
     free(opad);
