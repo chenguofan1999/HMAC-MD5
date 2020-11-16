@@ -207,6 +207,7 @@ void processInBlocks(word *A, word *B, word *C, word *D, word *words, int N)
     }
 }
 
+// result in hexadecimal representation of byte stream
 byte* MD5(byte *msg)
 {
     word *wordBuffer;
@@ -219,7 +220,9 @@ byte* MD5(byte *msg)
     byte *ans = (byte *)malloc(33);
     ans[0] = '\0';
 
-    byte *a = &A, *b = &B, *c = &C, *d = &D;
+    byte *a = (byte *)&A, *b = (byte *)&B, 
+         *c = (byte *)&C, *d = (byte *)&D;
+
     byte *regs[] = {a,b,c,d};
     for(int i = 0; i < 4; i++)
     {
@@ -232,40 +235,86 @@ byte* MD5(byte *msg)
     return ans;
 }
 
-
-byte *HMAC_MD5(byte *key, byte *msg)
+// result in original byte stream
+byte* MD_5(byte *msg)
 {
-    int blockSize = 64;
-    byte *_key;
-    if(strlen(key) > blockSize) _key = MD5(key);
-    else
+    word *wordBuffer;
+    int wordLen;
+    msgToWords(msg, strlen(msg), &wordBuffer, &wordLen);
+
+    word A,B,C,D;
+    processInBlocks(&A, &B, &C, &D, wordBuffer, wordLen);
+
+    byte *ans = (byte *)malloc(33);
+    ans[0] = '\0';
+
+    byte *a = (byte *)&A, *b = (byte *)&B, 
+         *c = (byte *)&C, *d = (byte *)&D;
+
+    byte *regs[] = {a,b,c,d};
+    for(int i = 0; i < 4; i++)
     {
-        // resize to blockSize
-        _key = (byte *)malloc(blockSize + 1);
-        for(int i = 0; i < strlen(key); i++)
-            _key[i] = key[i];
-        for(int i = strlen(key); i < blockSize; i++)
-            _key[i] = 0x00;
-        _key[blockSize] = '\0';
+        byte s[5];
+		sprintf(s, "%c%c%c%c\0", regs[i][0], regs[i][1], regs[i][2], regs[i][3]);
+        strcat(ans, s);
     }
 
+    free(wordBuffer);
+    return ans;
+}
+
+
+
+byte* HMAC_MD5(byte *key, byte *msg)
+{
+    int blockSize = 64;
+
+    byte *_key = strlen(key) > blockSize ? MD5(key) : key;
+
+    if(strlen(_key) < blockSize)
+    {
+        // resize to blockSize
+        byte *tKey = (byte *)malloc(blockSize + 1);
+        for(int i = 0; i < strlen(_key); i++)
+            tKey[i] = _key[i];
+        for(int i = strlen(key); i < blockSize; i++)
+            tKey[i] = 0x00;
+        tKey[blockSize] = '\0';
+
+        _key = tKey;
+    }
+
+    /*culc ipad*/
     byte *ipad = (byte *)malloc(blockSize + 1);
     for(int i = 0; i < blockSize; i++)
-        ipad[i] = 0x5c ^ _key[i];
+        ipad[i] = 0x36 ^ _key[i];
     ipad[blockSize] = '\0';
-    
+
+    /*culc opad*/   
     byte *opad = (byte *)malloc(blockSize + 1);
     for(int i = 0; i < blockSize; i++)
-        opad[i] = 0x36 ^ _key[i];
+        opad[i] = 0x5c ^ _key[i];
     opad[blockSize] = '\0';
 
-    int totalLen = blockSize * 2 + strlen(msg);
-    byte *M = (byte *)malloc(totalLen + 1);
-    M[0] = '\0';
+    /*result = MD5(opad ∥ MD5(ipad ∥ message))*/
+    int len1 = strlen(ipad) + strlen(msg);
+    byte *t1 = (byte *)malloc(len1 + 1);
+    t1[0] = '\0';
+    strcat(t1, ipad);
+    strcat(t1, msg);
+    t1 = MD_5(t1);
 
-    strcat(M, opad);
-    strcat(M, ipad);
-    strcat(M, msg);
+    byte *t2 = (byte *)malloc(81);
+    t2[0] = '\0';
+    strcat(t2, opad);
+    strcat(t2, t1);
+    byte *ans = MD5(t2);
 
-    return MD5(M);
+    free(_key);
+    free(ipad);
+    free(opad);
+    free(t1);
+    free(t2);
+
+    return ans;
 }
