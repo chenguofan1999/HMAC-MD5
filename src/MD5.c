@@ -26,8 +26,8 @@ void msgToWords(byte *msg, int n, word **words, int *N)
     for(int i = n + 1; i < paddedByteLen - 8; i++) paddedMsg[i] = 0;
 
     // pad originalSize in the last 2 words
-    unsigned originLenInBits = (unsigned)n * 8; 
-    memcpy(paddedMsg + paddedByteLen - 8, &originLenInBits, 4);
+    unsigned long long originLenInBits = (unsigned long long)n * 8; 
+    memcpy(paddedMsg + paddedByteLen - 8, &originLenInBits, 8);
     
     // convert from bytes to words
     int wordsLen = paddedByteLen / 4;
@@ -38,9 +38,8 @@ void msgToWords(byte *msg, int n, word **words, int *N)
         word thisWord = 0;
         for(int j = i; j <= i + 3; j++)
         {
-            //printf("paddedMsg[%d] = %c (%d)\n", j, paddedMsg[j], (word)paddedMsg[j]);
-            thisWord = thisWord << 8;
-            thisWord += (word)paddedMsg[j];
+            int shiftBits = (j - i) * 8;
+            thisWord += ((word)paddedMsg[j]) << shiftBits;
         }
         (*words)[i/4] = thisWord;
     }
@@ -52,7 +51,7 @@ void msgToWords(byte *msg, int n, word **words, int *N)
 }
 
 
-///////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 
 word S[4][16] = {
     { 7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22 },
@@ -95,7 +94,6 @@ word G(word x, word y, word z){ return (x & z) | (y & (~z)); }
 word H(word x, word y, word z){ return x ^ y ^ z; }
 word I(word x, word y, word z){ return y ^ (x | (~z)); }
 
-//#define leftRotate(x, n) (((x) << (n)) | ((x) >> (32-(n))))
 word leftRotate(word r, word N)
 {
 	unsigned  mask = (1 << N) - 1;
@@ -111,12 +109,6 @@ void round1(word *a, word b, word c, word d, word k, word s, word i)
     //*a = b + leftRotate((*a + F(b,c,d) + X[K[0][k]] + T[0][i]), S[0][s]);
 
     *a += F(b,c,d) + X[K[0][k]] + T[0][i];
-
-    printf("F:%lx\n", F(b,c,d));
-    printf("X:%lx\n", X[K[0][k]]);
-    printf("T:%lx\n", T[0][i]);
-    printf("->%lx\n", *a);
-
     *a = leftRotate(*a, S[0][s]);
 
     printf("->%lx\n", *a);
@@ -268,7 +260,7 @@ int main()
     int wordLen;
 
     //byte *msg = "jdfgsdhfsdfsd 156445dsfsd7fg/*/+bfjsdgf%$^";
-    byte *msg = "abcdefgh";
+    byte *msg = "ABCDE";
     msgToWords(msg, strlen(msg), &wordBuffer, &wordLen);
 
     // for(int i = 0; i < wordLen; i++)
@@ -278,6 +270,14 @@ int main()
     MD5(&A, &B, &C, &D, wordBuffer, wordLen);
     printf("%lx%lx%lx%lx\n",A,B,C,D);
 
+    byte *a = &A, *b = &B, *c = &C, *d = &D;
+    byte *registers[] = {a,b,c,d};
+    for(int i = 0; i < 4; i++)
+    {
+        for(int j = 0; j < 4; j++) 
+            printf("%02lx",registers[i][j]);  
+    }
+    printf("\n");
     //free(byteBuffer);
     free(wordBuffer);
 }

@@ -185,6 +185,9 @@ private:
     GG (c, d, a, b, x[ 7], S23, 0x676f02d9); /* 31 */
     GG (b, c, d, a, x[12], S24, 0x8d2a4c8a); /* 32 */
 
+    printf("After round 2:\n");
+    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
+
     /* Round 3 */
     HH (a, b, c, d, x[ 5], S31, 0xfffa3942); /* 33 */
     HH (d, a, b, c, x[ 8], S32, 0x8771f681); /* 34 */
@@ -203,6 +206,9 @@ private:
     HH (c, d, a, b, x[15], S33, 0x1fa27cf8); /* 47 */
     HH (b, c, d, a, x[ 2], S34, 0xc4ac5665); /* 48 */
 
+    printf("After round 3:\n");
+    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
+
     /* Round 4 */
     II (a, b, c, d, x[ 0], S41, 0xf4292244); /* 49 */
     II (d, a, b, c, x[ 7], S42, 0x432aff97); /* 50 */
@@ -220,6 +226,9 @@ private:
     II (d, a, b, c, x[11], S42, 0xbd3af235); /* 62 */
     II (c, d, a, b, x[ 2], S43, 0x2ad7d2bb); /* 63 */
     II (b, c, d, a, x[ 9], S44, 0xeb86d391); /* 64 */
+
+    printf("After round 4:\n");
+    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
 
     state[0] += a;
     state[1] += b;
