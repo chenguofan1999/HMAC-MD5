@@ -1,417 +1,235 @@
-#ifndef MD5_H
-#define MD5_H
-
-// Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
-// rights reserved.
-
-// License to copy and use this software is granted provided that it
-// is identified as the "RSA Data Security, Inc. MD5 Message-Digest
-// Algorithm" in all material mentioning or referencing this software
-// or this function.
-//
-// License is also granted to make and use derivative works provided
-// that such works are identified as "derived from the RSA Data
-// Security, Inc. MD5 Message-Digest Algorithm" in all material
-// mentioning or referencing the derived work.
-//
-// RSA Data Security, Inc. makes no representations concerning either
-// the merchantability of this software or the suitability of this
-// software for any particular purpose. It is provided "as is"
-// without express or implied warranty of any kind.
-//
-// These notices must be retained in any copies of any part of this
-// documentation and/or software.
-
-
-
-// The original md5 implementation avoids external libraries.
-// This version has dependency on stdio.h for file input and
-// string.h for memcpy.
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#pragma region MD5 defines
-// Constants for MD5Transform routine.
-#define S11 7
-#define S12 12
-#define S13 17
-#define S14 22
-#define S21 5
-#define S22 9
-#define S23 14
-#define S24 20
-#define S31 4
-#define S32 11
-#define S33 16
-#define S34 23
-#define S41 6
-#define S42 10
-#define S43 15
-#define S44 21
+typedef unsigned char byte;
+typedef unsigned word;
 
-
-
-
-
-
-static unsigned char PADDING[64] = {
-  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-// F, G, H and I are basic MD5 functions.
-#define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
-#define G(x, y, z) (((x) & (z)) | ((y) & (~z)))
-#define H(x, y, z) ((x) ^ (y) ^ (z))
-#define I(x, y, z) ((y) ^ ((x) | (~z)))
-
-// ROTATE_LEFT rotates x left n bits.
-#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
-
-// FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4.
-// Rotation is separate from addition to prevent recomputation.
-#define FF(a, b, c, d, x, s, ac) { \
-  (a) += F ((b), (c), (d)) + (x) + (UINT4)(ac); \
-  printf("F: %8lx\n", F ((b), (c), (d)));\
-  printf("X: %8lx\n", (x));\
-  printf("T: %8lx\n", (UINT4)(ac));\
-  printf("->%8lx\n", a);\
-  (a) = ROTATE_LEFT ((a), (s)); \
-  printf("->%8lx\n", a);\
-  (a) += (b); \
-  printf("->%8lx\n", a);\
-  }
-#define GG(a, b, c, d, x, s, ac) { \
-  (a) += G ((b), (c), (d)) + (x) + (UINT4)(ac); \
-  (a) = ROTATE_LEFT ((a), (s)); \
-  (a) += (b); \
-  }
-#define HH(a, b, c, d, x, s, ac) { \
-  (a) += H ((b), (c), (d)) + (x) + (UINT4)(ac); \
-  (a) = ROTATE_LEFT ((a), (s)); \
-  (a) += (b); \
-  }
-#define II(a, b, c, d, x, s, ac) { \
-  (a) += I ((b), (c), (d)) + (x) + (UINT4)(ac); \
-  (a) = ROTATE_LEFT ((a), (s)); \
-  (a) += (b); \
-  }
-#pragma endregion
-
-typedef unsigned char BYTE;
-
-// POINTER defines a generic pointer type
-typedef unsigned char *POINTER;
-
-// UINT2 defines a two byte word
-typedef unsigned short int UINT2;
-
-// UINT4 defines a four byte word
-typedef unsigned long int UINT4;
-
-
-// convenient object that wraps
-// the C-functions for use in C++ only
-class MD5
+/**
+ * Input 
+ * - msg : original message  
+ * - n   : length of msg
+ * Output
+ * - words : padded and converted words
+ * - N : length of words
+ */ 
+void msgToWords(byte *msg, int n, word **words, int *N)
 {
-private:
-  struct __context_t {
-    UINT4 state[4];                                   /* state (ABCD) */
-    UINT4 count[2];        /* number of bits, modulo 2^64 (lsb first) */
-    unsigned char buffer[64];                         /* input buffer */
-  } context ;
+    // pad the msg
+    int paddedBlockNumber = 1 + (n + 8) / 64;
+    int paddedByteLen = paddedBlockNumber * 64; 
+    byte *paddedMsg = (byte *)malloc(paddedByteLen);
 
-  #pragma region static helper functions
-  // The core of the MD5 algorithm is here.
-  // MD5 basic transformation. Transforms state based on block.
-  static void MD5Transform( UINT4 state[4], unsigned char block[64] )
-  {
-    UINT4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];
+    for(int i = 0; i < n; i++) paddedMsg[i] = msg[i];
+    paddedMsg[n] = (byte)0x80;
+    for(int i = n + 1; i < paddedByteLen - 8; i++) paddedMsg[i] = 0;
 
-    Decode (x, block, 64);
-
-    printf("Before round 1.0:\n");
-    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
-
-    /* Round 1 */
-    FF (a, b, c, d, x[ 0], S11, 0xd76aa478); /* 1 */
-
-    printf("After round 1.1:\n");
-    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
-
-    FF (d, a, b, c, x[ 1], S12, 0xe8c7b756); /* 2 */
-
-    printf("After round 1.2:\n");
-    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
-
-    FF (c, d, a, b, x[ 2], S13, 0x242070db); /* 3 */
-    FF (b, c, d, a, x[ 3], S14, 0xc1bdceee); /* 4 */
-    FF (a, b, c, d, x[ 4], S11, 0xf57c0faf); /* 5 */
-    FF (d, a, b, c, x[ 5], S12, 0x4787c62a); /* 6 */
-
-    printf("After round 1.6:\n");
-    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
-
-    FF (c, d, a, b, x[ 6], S13, 0xa8304613); /* 7 */
-    FF (b, c, d, a, x[ 7], S14, 0xfd469501); /* 8 */
-    FF (a, b, c, d, x[ 8], S11, 0x698098d8); /* 9 */
-    FF (d, a, b, c, x[ 9], S12, 0x8b44f7af); /* 10 */
-    FF (c, d, a, b, x[10], S13, 0xffff5bb1); /* 11 */
-    FF (b, c, d, a, x[11], S14, 0x895cd7be); /* 12 */
-    FF (a, b, c, d, x[12], S11, 0x6b901122); /* 13 */
-    FF (d, a, b, c, x[13], S12, 0xfd987193); /* 14 */
-    FF (c, d, a, b, x[14], S13, 0xa679438e); /* 15 */
-    FF (b, c, d, a, x[15], S14, 0x49b40821); /* 16 */
-
-    printf("After round 1:\n");
-    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
-
-    /* Round 2 */
-    GG (a, b, c, d, x[ 1], S21, 0xf61e2562); /* 17 */
-    GG (d, a, b, c, x[ 6], S22, 0xc040b340); /* 18 */
-    GG (c, d, a, b, x[11], S23, 0x265e5a51); /* 19 */
-    GG (b, c, d, a, x[ 0], S24, 0xe9b6c7aa); /* 20 */
-    GG (a, b, c, d, x[ 5], S21, 0xd62f105d); /* 21 */
-    GG (d, a, b, c, x[10], S22,  0x2441453); /* 22 */
-    GG (c, d, a, b, x[15], S23, 0xd8a1e681); /* 23 */
-    GG (b, c, d, a, x[ 4], S24, 0xe7d3fbc8); /* 24 */
-    GG (a, b, c, d, x[ 9], S21, 0x21e1cde6); /* 25 */
-    GG (d, a, b, c, x[14], S22, 0xc33707d6); /* 26 */
-    GG (c, d, a, b, x[ 3], S23, 0xf4d50d87); /* 27 */
-    GG (b, c, d, a, x[ 8], S24, 0x455a14ed); /* 28 */
-    GG (a, b, c, d, x[13], S21, 0xa9e3e905); /* 29 */
-    GG (d, a, b, c, x[ 2], S22, 0xfcefa3f8); /* 30 */
-    GG (c, d, a, b, x[ 7], S23, 0x676f02d9); /* 31 */
-    GG (b, c, d, a, x[12], S24, 0x8d2a4c8a); /* 32 */
-
-    printf("After round 2:\n");
-    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
-
-    /* Round 3 */
-    HH (a, b, c, d, x[ 5], S31, 0xfffa3942); /* 33 */
-    HH (d, a, b, c, x[ 8], S32, 0x8771f681); /* 34 */
-    HH (c, d, a, b, x[11], S33, 0x6d9d6122); /* 35 */
-    HH (b, c, d, a, x[14], S34, 0xfde5380c); /* 36 */
-    HH (a, b, c, d, x[ 1], S31, 0xa4beea44); /* 37 */
-    HH (d, a, b, c, x[ 4], S32, 0x4bdecfa9); /* 38 */
-    HH (c, d, a, b, x[ 7], S33, 0xf6bb4b60); /* 39 */
-    HH (b, c, d, a, x[10], S34, 0xbebfbc70); /* 40 */
-    HH (a, b, c, d, x[13], S31, 0x289b7ec6); /* 41 */
-    HH (d, a, b, c, x[ 0], S32, 0xeaa127fa); /* 42 */
-    HH (c, d, a, b, x[ 3], S33, 0xd4ef3085); /* 43 */
-    HH (b, c, d, a, x[ 6], S34,  0x4881d05); /* 44 */
-    HH (a, b, c, d, x[ 9], S31, 0xd9d4d039); /* 45 */
-    HH (d, a, b, c, x[12], S32, 0xe6db99e5); /* 46 */
-    HH (c, d, a, b, x[15], S33, 0x1fa27cf8); /* 47 */
-    HH (b, c, d, a, x[ 2], S34, 0xc4ac5665); /* 48 */
-
-    printf("After round 3:\n");
-    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
-
-    /* Round 4 */
-    II (a, b, c, d, x[ 0], S41, 0xf4292244); /* 49 */
-    II (d, a, b, c, x[ 7], S42, 0x432aff97); /* 50 */
-    II (c, d, a, b, x[14], S43, 0xab9423a7); /* 51 */
-    II (b, c, d, a, x[ 5], S44, 0xfc93a039); /* 52 */
-    II (a, b, c, d, x[12], S41, 0x655b59c3); /* 53 */
-    II (d, a, b, c, x[ 3], S42, 0x8f0ccc92); /* 54 */
-    II (c, d, a, b, x[10], S43, 0xffeff47d); /* 55 */
-    II (b, c, d, a, x[ 1], S44, 0x85845dd1); /* 56 */
-    II (a, b, c, d, x[ 8], S41, 0x6fa87e4f); /* 57 */
-    II (d, a, b, c, x[15], S42, 0xfe2ce6e0); /* 58 */
-    II (c, d, a, b, x[ 6], S43, 0xa3014314); /* 59 */
-    II (b, c, d, a, x[13], S44, 0x4e0811a1); /* 60 */
-    II (a, b, c, d, x[ 4], S41, 0xf7537e82); /* 61 */
-    II (d, a, b, c, x[11], S42, 0xbd3af235); /* 62 */
-    II (c, d, a, b, x[ 2], S43, 0x2ad7d2bb); /* 63 */
-    II (b, c, d, a, x[ 9], S44, 0xeb86d391); /* 64 */
-
-    printf("After round 4:\n");
-    printf("   a : %lx\n   b : %lx\n   c : %lx\n   d : %lx\n",a,b,c,d);
-
-    state[0] += a;
-    state[1] += b;
-    state[2] += c;
-    state[3] += d;
-
-    // Zeroize sensitive information.
-    memset((POINTER)x, 0, sizeof (x));
-  }
-
-  // Encodes input (UINT4) into output (unsigned char). Assumes len is
-  // a multiple of 4.
-  static void Encode( unsigned char *output, UINT4 *input, unsigned int len )
-  {
-    unsigned int i, j;
-
-    for (i = 0, j = 0; j < len; i++, j += 4) {
-      output[j] = (unsigned char)(input[i] & 0xff);
-      output[j+1] = (unsigned char)((input[i] >> 8) & 0xff);
-      output[j+2] = (unsigned char)((input[i] >> 16) & 0xff);
-      output[j+3] = (unsigned char)((input[i] >> 24) & 0xff);
-    }
-  }
-
-  // Decodes input (unsigned char) into output (UINT4). Assumes len is
-  // a multiple of 4.
-  static void Decode( UINT4 *output, unsigned char *input, unsigned int len )
-  {
-    unsigned int i, j;
-
-    for (i = 0, j = 0; j < len; i++, j += 4)
-      output[i] = ((UINT4)input[j]) | (((UINT4)input[j+1]) << 8) |
-      (((UINT4)input[j+2]) << 16) | (((UINT4)input[j+3]) << 24);
-  }
-  #pragma endregion
-
-
-public:
-  // MAIN FUNCTIONS
-  MD5()
-  {
-    Init() ;
-  }
-
-  // MD5 initialization. Begins an MD5 operation, writing a new context.
-  void Init()
-  {
-    context.count[0] = context.count[1] = 0;
-  
-    // Load magic initialization constants.
-    context.state[0] = 0x67452301;
-    context.state[1] = 0xefcdab89;
-    context.state[2] = 0x98badcfe;
-    context.state[3] = 0x10325476;
-  }
-
-  // MD5 block update operation. Continues an MD5 message-digest
-  // operation, processing another message block, and updating the
-  // context.
-  void Update(
-    unsigned char *input,   // input block
-    unsigned int inputLen ) // length of input block
-  {
-    unsigned int i, index, partLen;
-
-    // Compute number of bytes mod 64
-    index = (unsigned int)((context.count[0] >> 3) & 0x3F);
-
-    // Update number of bits
-    if ((context.count[0] += ((UINT4)inputLen << 3))
-      < ((UINT4)inputLen << 3))
-      context.count[1]++;
-    context.count[1] += ((UINT4)inputLen >> 29);
-
-    partLen = 64 - index;
-
-    // Transform as many times as possible.
-    if (inputLen >= partLen) {
-      memcpy((POINTER)&context.buffer[index], (POINTER)input, partLen);
-      MD5Transform (context.state, context.buffer);
-
-      for (i = partLen; i + 63 < inputLen; i += 64)
-        MD5Transform (context.state, &input[i]);
-
-      index = 0;
-    }
-    else
-      i = 0;
-
-    /* Buffer remaining input */
-    memcpy((POINTER)&context.buffer[index], (POINTER)&input[i], inputLen-i);
-  }
-
-  // MD5 finalization. Ends an MD5 message-digest operation, writing the
-  // the message digest and zeroizing the context.
-  // Writes to digestRaw
-  void Final()
-  {
-    unsigned char bits[8];
-    unsigned int index, padLen;
-
-    // Save number of bits
-    Encode( bits, context.count, 8 );
-
-    // Pad out to 56 mod 64.
-    index = (unsigned int)((context.count[0] >> 3) & 0x3f);
-    padLen = (index < 56) ? (56 - index) : (120 - index);
-    Update( PADDING, padLen );
-
-    // Append length (before padding)
-    Update( bits, 8 );
-
-    // Store state in digest
-    Encode( digestRaw, context.state, 16);
-
-    // Zeroize sensitive information.
-    memset((POINTER)&context, 0, sizeof (context));
-
-    writeToString() ;
-  }
-
-  /// Buffer must be 32+1 (nul) = 33 chars long at least 
-  void writeToString()
-  {
-    int pos ;
-
-    for( pos = 0 ; pos < 16 ; pos++ )
-      sprintf( digestChars+(pos*2), "%02x", digestRaw[pos] ) ;
-  }
-
-
-public:
-  // an MD5 digest is a 16-byte number (32 hex digits)
-  BYTE digestRaw[ 16 ] ;
-
-  // This version of the digest is actually
-  // a "printf'd" version of the digest.
-  char digestChars[ 33 ] ;
-
-  /// Load a file from disk and digest it
-  // Digests a file and returns the result.
-  char* digestFile( char *filename )
-  {
-    Init() ;
-
-    FILE *file;
+    // pad originalSize in the last 2 words
+    unsigned long long originLenInBits = (unsigned long long)n * 8; 
+    memcpy(paddedMsg + paddedByteLen - 8, &originLenInBits, 8);
     
-    int len;
-    unsigned char buffer[1024] ;
-
-    if( (file = fopen (filename, "rb")) == NULL )
-      printf( "%s can't be opened\n", filename ) ;
-    else
+    // convert from bytes to words
+    int wordsLen = paddedByteLen / 4;
+    *N = wordsLen;
+    *words = (word *)malloc(paddedByteLen);
+    for(int i = 0; i < paddedByteLen; i += 4)
     {
-      while( len = fread( buffer, 1, 1024, file ) )
-        Update( buffer, len ) ;
-      Final();
-
-      fclose( file );
+        word thisWord = 0;
+        for(int j = i; j <= i + 3; j++)
+        {
+            int shiftBits = (j - i) * 8;
+            thisWord += ((word)paddedMsg[j]) << shiftBits;
+        }
+        (*words)[i/4] = thisWord;
     }
 
-    return digestChars ;
-  }
+    free(paddedMsg);
+}
 
-  /// Digests a byte-array already in memory
-  char* digestMemory( BYTE *memchunk, int len )
-  {
-    Init() ;
-    Update( memchunk, len ) ;
-    Final() ;
+
+//////////////////////////////////////////////////////////////////
+
+word S[4][16] = {
+    { 7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22 },
+    { 5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20 },
+    { 4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23 },
+    { 6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21 }};
+
+word T[4][16] = {
+    {
+        0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 
+        0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501, 
+        0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
+        0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821
+    },{
+        0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa,
+        0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
+        0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed,
+        0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a
+    },{
+        0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c,
+        0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
+        0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05,
+        0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665
+    },{
+        0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039,
+        0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
+        0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
+        0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
+    }};
+
+word X[16];
+word K[4][16] = {
+    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+    { 1, 6, 11, 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12 },
+    { 5, 8, 11, 14, 1, 4, 7, 10, 13, 0, 3, 6, 9, 12, 15, 2 }, 
+    { 0, 7, 14, 5, 12, 3, 10, 1, 8, 15, 6, 13, 4, 11, 2, 9 }};
+
+word F(word x, word y, word z){ return (x & y) | ((~x) & z); }
+word G(word x, word y, word z){ return (x & z) | (y & (~z)); }
+word H(word x, word y, word z){ return x ^ y ^ z; }
+word I(word x, word y, word z){ return y ^ (x | (~z)); }
+
+word leftRotate(word r, word N)
+{
+	unsigned  mask = (1 << N) - 1;
+	return ((r >> (32 - N)) & mask) | ((r << N) & ~mask);
+}
+
+void round1(word *a, word b, word c, word d, word k, word s, word i)
+{ *a = b + leftRotate((*a + F(b,c,d) + X[K[0][k]] + T[0][i]), S[0][s]);} 
+
+void round2(word *a, word b, word c, word d, word k, word s, word i)
+{ *a = b + leftRotate((*a + G(b,c,d) + X[K[1][k]] + T[1][i]), S[1][s]);} 
+
+void round3(word *a, word b, word c, word d, word k, word s, word i)
+{ *a = b + leftRotate((*a + H(b,c,d) + X[K[2][k]] + T[2][i]), S[2][s]);} 
+
+void round4(word *a, word b, word c, word d, word k, word s, word i)
+{ *a = b + leftRotate((*a + I(b,c,d) + X[K[3][k]] + T[3][i]), S[3][s]);} 
+
+
+/** MD5 receives registers and padded words, calculates the outputs in registers. 
+ * A,B,C,D : 4 registers
+ * words : padded message
+ * N : length of words, a multiple of 16 (16 words for a block)
+ */ 
+void processInBlocks(word *A, word *B, word *C, word *D, word *words, int N)
+{
+    // initialize   
+    *A = 0x67452301;
+    *B = 0xefcdab89;
+    *C = 0x98badcfe;
+    *D = 0x10325476;
+
+    /* process each 16-word block */ 
+    for(int i = 0; i < N / 16; i++)
+    {
+        for(int j = 0; j < 16; j++) X[j] = words[16 * i + j];
+
+        word a = *A, b = *B, c = *C, d = *D;
+
+        // Round 1 
+        round1(&a, b, c, d, 0, 0, 0); // 1.1
+        round1(&d, a, b, c, 1, 1, 1); //
+        round1(&c, d, a, b, 2, 2, 2);
+        round1(&b, c, d, a, 3, 3, 3);
+        round1(&a, b, c, d, 4, 4, 4);
+        round1(&d, a, b, c, 5, 5, 5);
+        round1(&c, d, a, b, 6, 6, 6);
+        round1(&b, c, d, a, 7, 7, 7);
+        round1(&a, b, c, d, 8, 8, 8);
+        round1(&d, a, b, c, 9, 9, 9);
+        round1(&c, d, a, b, 10, 10, 10);
+        round1(&b, c, d, a, 11, 11, 11);
+        round1(&a, b, c, d, 12, 12, 12);
+        round1(&d, a, b, c, 13, 13, 13);
+        round1(&c, d, a, b, 14, 14, 14);
+        round1(&b, c, d, a, 15, 15, 15);
+
+        //Round 2
+        round2(&a, b, c, d, 0, 0, 0);
+        round2(&d, a, b, c, 1, 1, 1);
+        round2(&c, d, a, b, 2, 2, 2);
+        round2(&b, c, d, a, 3, 3, 3);
+        round2(&a, b, c, d, 4, 4, 4);
+        round2(&d, a, b, c, 5, 5, 5);
+        round2(&c, d, a, b, 6, 6, 6);
+        round2(&b, c, d, a, 7, 7, 7);
+        round2(&a, b, c, d, 8, 8, 8);
+        round2(&d, a, b, c, 9, 9, 9);
+        round2(&c, d, a, b, 10, 10, 10);
+        round2(&b, c, d, a, 11, 11, 11);
+        round2(&a, b, c, d, 12, 12, 12);
+        round2(&d, a, b, c, 13, 13, 13);
+        round2(&c, d, a, b, 14, 14, 14);
+        round2(&b, c, d, a, 15, 15, 15);
+
+        //Round 3
+        round3(&a, b, c, d, 0, 0, 0);
+        round3(&d, a, b, c, 1, 1, 1);
+        round3(&c, d, a, b, 2, 2, 2);
+        round3(&b, c, d, a, 3, 3, 3);
+        round3(&a, b, c, d, 4, 4, 4);
+        round3(&d, a, b, c, 5, 5, 5);
+        round3(&c, d, a, b, 6, 6, 6);
+        round3(&b, c, d, a, 7, 7, 7);
+        round3(&a, b, c, d, 8, 8, 8);
+        round3(&d, a, b, c, 9, 9, 9);
+        round3(&c, d, a, b, 10, 10, 10);
+        round3(&b, c, d, a, 11, 11, 11);
+        round3(&a, b, c, d, 12, 12, 12);
+        round3(&d, a, b, c, 13, 13, 13);
+        round3(&c, d, a, b, 14, 14, 14);
+        round3(&b, c, d, a, 15, 15, 15);
+
+        //Round 4
+        round4(&a, b, c, d, 0, 0, 0);
+        round4(&d, a, b, c, 1, 1, 1);
+        round4(&c, d, a, b, 2, 2, 2);
+        round4(&b, c, d, a, 3, 3, 3);
+        round4(&a, b, c, d, 4, 4, 4);
+        round4(&d, a, b, c, 5, 5, 5);
+        round4(&c, d, a, b, 6, 6, 6);
+        round4(&b, c, d, a, 7, 7, 7);
+        round4(&a, b, c, d, 8, 8, 8);
+        round4(&d, a, b, c, 9, 9, 9);
+        round4(&c, d, a, b, 10, 10, 10);
+        round4(&b, c, d, a, 11, 11, 11);
+        round4(&a, b, c, d, 12, 12, 12);
+        round4(&d, a, b, c, 13, 13, 13);
+        round4(&c, d, a, b, 14, 14, 14);
+        round4(&b, c, d, a, 15, 15, 15);
     
-    return digestChars ;
-  }
+        *A += a;
+        *B += b;
+        *C += c;
+        *D += d;
+    }
+}
 
-  // Digests a string and prints the result.
-  char* digestString( char *string )
-  {
-    Init() ;
-    Update( (unsigned char*)string, strlen(string) ) ;
-    Final() ;
+byte* MD5(byte *msg)
+{
+    word *wordBuffer;
+    int wordLen;
+    msgToWords(msg, strlen(msg), &wordBuffer, &wordLen);
 
-    return digestChars ;
-  }
-} ;
+    word A,B,C,D;
+    processInBlocks(&A, &B, &C, &D, wordBuffer, wordLen);
 
-#endif
+    byte *ans = (byte *)malloc(33);
+    ans[0] = '\0';
+
+    byte *a = &A, *b = &B, *c = &C, *d = &D;
+    byte *regs[] = {a,b,c,d};
+    for(int i = 0; i < 4; i++)
+    {
+        char s[9];
+		sprintf(s, "%02x%02x%02x%02x\0", regs[i][0], regs[i][1], regs[i][2], regs[i][3]);
+        strcat(ans, s);
+    }
+
+    free(wordBuffer);
+    return ans;
+}
+
+
