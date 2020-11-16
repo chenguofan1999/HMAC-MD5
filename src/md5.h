@@ -223,7 +223,7 @@ byte* MD5(byte *msg)
     byte *regs[] = {a,b,c,d};
     for(int i = 0; i < 4; i++)
     {
-        char s[9];
+        byte s[9];
 		sprintf(s, "%02x%02x%02x%02x\0", regs[i][0], regs[i][1], regs[i][2], regs[i][3]);
         strcat(ans, s);
     }
@@ -233,3 +233,39 @@ byte* MD5(byte *msg)
 }
 
 
+byte *HMAC_MD5(byte *key, byte *msg)
+{
+    int blockSize = 64;
+    byte *_key;
+    if(strlen(key) > blockSize) _key = MD5(key);
+    else
+    {
+        // resize to blockSize
+        _key = (byte *)malloc(blockSize + 1);
+        for(int i = 0; i < strlen(key); i++)
+            _key[i] = key[i];
+        for(int i = strlen(key); i < blockSize; i++)
+            _key[i] = 0x00;
+        _key[blockSize] = '\0';
+    }
+
+    byte *ipad = (byte *)malloc(blockSize + 1);
+    for(int i = 0; i < blockSize; i++)
+        ipad[i] = 0x5c ^ _key[i];
+    ipad[blockSize] = '\0';
+    
+    byte *opad = (byte *)malloc(blockSize + 1);
+    for(int i = 0; i < blockSize; i++)
+        opad[i] = 0x36 ^ _key[i];
+    opad[blockSize] = '\0';
+
+    int totalLen = blockSize * 2 + strlen(msg);
+    byte *M = (byte *)malloc(totalLen + 1);
+    M[0] = '\0';
+
+    strcat(M, opad);
+    strcat(M, ipad);
+    strcat(M, msg);
+
+    return MD5(M);
+}
