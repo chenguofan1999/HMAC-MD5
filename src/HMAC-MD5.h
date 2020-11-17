@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 // byte 字节 : 8位
 // word 字   : 32位
@@ -284,39 +285,34 @@ byte* MD_5(byte *msg)
 
 /**
  * 使用 MD5 作为散列函数的 HMAC 算法
- * 输入加密密钥 key 和需要认证的消息 msg
+ * input
+ * - key : 加密密钥 (字符串)
+ * - msg : 需要认证的消息
  * 输出消息认证码
  */
 byte* HMAC_MD5(byte *key, byte *msg)
 {
-    int blockSize = 64;
+    byte *_key = strlen(key) > 64 ? MD_5(key) : key;
 
-    byte *_key = strlen(key) > blockSize ? MD5(key) : key;
-
-    if(strlen(_key) < blockSize)
+    if(strlen(_key) < 64)
     {
         // resize to blockSize
-        byte *tKey = (byte *)malloc(blockSize + 1);
-        for(int i = 0; i < strlen(_key); i++)
-            tKey[i] = _key[i];
-        for(int i = strlen(key); i < blockSize; i++)
-            tKey[i] = 0x00;
-        tKey[blockSize] = '\0';
-
+        byte tKey[65];
+        for(int i = 0; i < strlen(_key); i++) tKey[i] = _key[i];
+        for(int i = strlen(key); i < 65; i++) tKey[i] = 0x00;
+        tKey[64] = '\0';
         _key = tKey;
     }
 
     /*计算 ipad*/
-    byte *ipad = (byte *)malloc(blockSize + 1);
-    for(int i = 0; i < blockSize; i++)
-        ipad[i] = 0x36 ^ _key[i];
-    ipad[blockSize] = '\0';
+    byte ipad[65];
+    for(int i = 0; i < 64; i++) ipad[i] = 0x36 ^ _key[i];
+    ipad[64] = '\0';
 
     /*计算 opad*/   
-    byte *opad = (byte *)malloc(blockSize + 1);
-    for(int i = 0; i < blockSize; i++)
-        opad[i] = 0x5c ^ _key[i];
-    opad[blockSize] = '\0';
+    byte opad[65];
+    for(int i = 0; i < 64; i++) opad[i] = 0x5c ^ _key[i];
+    opad[64] = '\0';
 
     /*result = MD5(opad ∥ MD5(ipad ∥ message))*/
 
@@ -329,8 +325,7 @@ byte* HMAC_MD5(byte *key, byte *msg)
     t1 = MD_5(t1);
 
     // 2. t2 = opad ∥ t1
-    int len2 = strlen(opad) + strlen(t1);
-    byte *t2 = (byte *)malloc(len2);
+    byte t2[81];
     t2[0] = '\0';
     strcat(t2, opad);
     strcat(t2, t1);
@@ -339,11 +334,7 @@ byte* HMAC_MD5(byte *key, byte *msg)
     byte *ans = MD5(t2);
     
     // 别忘了释放空间
-    free(_key);
-    free(ipad);
-    free(opad);
     free(t1);
-    free(t2);
 
     return ans;
 }
