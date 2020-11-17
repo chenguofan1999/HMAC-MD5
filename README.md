@@ -1,5 +1,3 @@
-# HMAC-MD5 : C Implementation
-
 ![logo](logo.png)
 
 ## What is this?
