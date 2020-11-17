@@ -1,6 +1,9 @@
 # HMAC-MD5
 
 [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/chenguofan1999/HMAC-MD5)
+[![Sourcegraph](https://img.shields.io/badge/Try_it-Online-E91E63.svg?style=for-the-badge&color=blue)](https://wandbox.org/permlink/2793OyJR90UR6GT3)
+
+
 
 ![logo](logo.png)
 
