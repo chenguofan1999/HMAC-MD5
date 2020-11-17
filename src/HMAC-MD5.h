@@ -7,53 +7,6 @@
 typedef unsigned char byte;
 typedef unsigned word;
 
-/**
- * Input 
- * - msg   : 原始的信息  
- * - n     : 信息的字节长度
- * Output
- * - words : 填充至 64 字节整数倍大小的字的数组
- * - N     : words 的长度（单位：字）
- */ 
-void msgToWords(byte *msg, int n, word **words, int *N)
-{
-    /* 填充数据至块大小的整数倍 */
-    int paddedBlockNumber = 1 + (n + 8) / 64;
-    int paddedByteLen = paddedBlockNumber * 64; 
-    byte *paddedMsg = (byte *)malloc(paddedByteLen);
-
-    for(int i = 0; i < n; i++) paddedMsg[i] = msg[i];
-    paddedMsg[n] = (byte)0x80;
-    for(int i = n + 1; i < paddedByteLen - 8; i++) paddedMsg[i] = 0;
-
-    /* 将原始数据长度填充至最后两个字 */
-    // 直接 memcpy 可一定程度上避免大小端问题
-    unsigned long long originLenInBits = (unsigned long long)n * 8; 
-    memcpy(paddedMsg + paddedByteLen - 8, &originLenInBits, 8);
-    
-    /* 从字节(byte)的数组转换为字(word)的数组 */
-    // 不进行这一转换可避免大小段问题
-    int wordsLen = paddedByteLen / 4;
-    *N = wordsLen;
-    *words = (word *)malloc(paddedByteLen);
-    for(int i = 0; i < paddedByteLen; i += 4)
-    {
-        word thisWord = 0;
-        for(int j = i; j <= i + 3; j++)
-        {
-            // shiftBits 的计算体现小端模式
-            int shiftBits = (j - i) * 8;
-            thisWord += ((word)paddedMsg[j]) << shiftBits;
-        }
-        (*words)[i/4] = thisWord;
-    }
-
-    free(paddedMsg);
-}
-
-
-//////////////////////////////////////////////////////////////////
-
 // S[i][j] 表示在第 i 轮中，第 j 次运算中循环左移的位数
 word S[4][16] = {
     { 7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22 },
@@ -120,8 +73,54 @@ void round4(word *a, word b, word c, word d, word k, word s, word i)
 { *a = b + leftRotate((*a + I(b,c,d) + X[K[3][k]] + T[3][i]), S[3][s]);} 
 
 
+
+
+/**
+ * Input 
+ * - msg   : 原始的信息  
+ * - n     : 信息的字节长度
+ * Output
+ * - words : 填充至 64 字节整数倍大小的字的数组
+ * - N     : words 的长度（单位：字）
+ */ 
+void msgToWords(byte *msg, int n, word **words, int *N)
+{
+    /* 填充数据至块大小的整数倍 */
+    int paddedBlockNumber = 1 + (n + 8) / 64;
+    int paddedByteLen = paddedBlockNumber * 64; 
+    byte *paddedMsg = (byte *)malloc(paddedByteLen);
+
+    for(int i = 0; i < n; i++) paddedMsg[i] = msg[i];
+    paddedMsg[n] = (byte)0x80;
+    for(int i = n + 1; i < paddedByteLen - 8; i++) paddedMsg[i] = 0;
+
+    /* 将原始数据长度填充至最后两个字 */
+    // 直接 memcpy 可一定程度上避免大小端问题
+    unsigned long long originLenInBits = (unsigned long long)n * 8; 
+    memcpy(paddedMsg + paddedByteLen - 8, &originLenInBits, 8);
+    
+    /* 从字节(byte)的数组转换为字(word)的数组 */
+    // 不进行这一转换可避免大小段问题
+    int wordsLen = paddedByteLen / 4;
+    *N = wordsLen;
+    *words = (word *)malloc(paddedByteLen);
+    for(int i = 0; i < paddedByteLen; i += 4)
+    {
+        word thisWord = 0;
+        for(int j = i; j <= i + 3; j++)
+        {
+            // shiftBits 的计算体现小端模式
+            int shiftBits = (j - i) * 8;
+            thisWord += ((word)paddedMsg[j]) << shiftBits;
+        }
+        (*words)[i/4] = thisWord;
+    }
+
+    free(paddedMsg);
+}
+
 /** 
- * MD5 接收转换后的字的数组 words 和元素个数 N,
+ * processInBlocks 接收转换后的字的数组 words 和元素个数 N,
  * 经过每块 4 轮计算后，结果被写入传入的 4 个寄存器
  */ 
 void processInBlocks(word *A, word *B, word *C, word *D, word *words, int N)
@@ -288,7 +287,8 @@ byte* MD_5(byte *msg)
  * input
  * - key : 加密密钥 (字符串)
  * - msg : 需要认证的消息
- * 输出消息认证码
+ * output
+ * - 返回数据摘要的十六进制形式的字符串
  */
 byte* HMAC_MD5(byte *key, byte *msg)
 {
