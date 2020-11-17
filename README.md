@@ -1,5 +1,7 @@
 # HMAC-MD5
 
+[![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/chenguofan1999/HMAC-MD5)
+
 ![logo](logo.png)
 
 ## What is this?
