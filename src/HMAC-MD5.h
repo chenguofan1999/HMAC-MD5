@@ -60,17 +60,17 @@ word leftRotate(word r, word N)
 	return ((r >> (32 - N)) & mask) | ((r << N) & ~mask);
 }
 
-void round1(word *a, word b, word c, word d, word k, word s, word i)
-{ *a = b + leftRotate((*a + F(b,c,d) + X[K[0][k]] + T[0][i]), S[0][s]);} 
+void round1(word *a, word b, word c, word d, int i)
+{ *a = b + leftRotate((*a + F(b,c,d) + X[K[0][i]] + T[0][i]), S[0][i]);} 
 
-void round2(word *a, word b, word c, word d, word k, word s, word i)
-{ *a = b + leftRotate((*a + G(b,c,d) + X[K[1][k]] + T[1][i]), S[1][s]);} 
+void round2(word *a, word b, word c, word d, int i)
+{ *a = b + leftRotate((*a + G(b,c,d) + X[K[1][i]] + T[1][i]), S[1][i]);} 
 
-void round3(word *a, word b, word c, word d, word k, word s, word i)
-{ *a = b + leftRotate((*a + H(b,c,d) + X[K[2][k]] + T[2][i]), S[2][s]);} 
+void round3(word *a, word b, word c, word d, int i)
+{ *a = b + leftRotate((*a + H(b,c,d) + X[K[2][i]] + T[2][i]), S[2][i]);} 
 
-void round4(word *a, word b, word c, word d, word k, word s, word i)
-{ *a = b + leftRotate((*a + I(b,c,d) + X[K[3][k]] + T[3][i]), S[3][s]);} 
+void round4(word *a, word b, word c, word d, int i)
+{ *a = b + leftRotate((*a + I(b,c,d) + X[K[3][i]] + T[3][i]), S[3][i]);} 
 
 
 
@@ -139,76 +139,76 @@ void processInBlocks(word *A, word *B, word *C, word *D, word *words, int N)
         word a = *A, b = *B, c = *C, d = *D;
 
         // Round 1 
-        round1(&a, b, c, d, 0, 0, 0); // 1.1
-        round1(&d, a, b, c, 1, 1, 1); //
-        round1(&c, d, a, b, 2, 2, 2);
-        round1(&b, c, d, a, 3, 3, 3);
-        round1(&a, b, c, d, 4, 4, 4);
-        round1(&d, a, b, c, 5, 5, 5);
-        round1(&c, d, a, b, 6, 6, 6);
-        round1(&b, c, d, a, 7, 7, 7);
-        round1(&a, b, c, d, 8, 8, 8);
-        round1(&d, a, b, c, 9, 9, 9);
-        round1(&c, d, a, b, 10, 10, 10);
-        round1(&b, c, d, a, 11, 11, 11);
-        round1(&a, b, c, d, 12, 12, 12);
-        round1(&d, a, b, c, 13, 13, 13);
-        round1(&c, d, a, b, 14, 14, 14);
-        round1(&b, c, d, a, 15, 15, 15);
+        round1(&a, b, c, d, 0); 
+        round1(&d, a, b, c, 1);
+        round1(&c, d, a, b, 2);
+        round1(&b, c, d, a, 3);
+        round1(&a, b, c, d, 4);
+        round1(&d, a, b, c, 5);
+        round1(&c, d, a, b, 6);
+        round1(&b, c, d, a, 7);
+        round1(&a, b, c, d, 8);
+        round1(&d, a, b, c, 9);
+        round1(&c, d, a, b, 10);
+        round1(&b, c, d, a, 11);
+        round1(&a, b, c, d, 12);
+        round1(&d, a, b, c, 13);
+        round1(&c, d, a, b, 14);
+        round1(&b, c, d, a, 15);
 
         //Round 2
-        round2(&a, b, c, d, 0, 0, 0);
-        round2(&d, a, b, c, 1, 1, 1);
-        round2(&c, d, a, b, 2, 2, 2);
-        round2(&b, c, d, a, 3, 3, 3);
-        round2(&a, b, c, d, 4, 4, 4);
-        round2(&d, a, b, c, 5, 5, 5);
-        round2(&c, d, a, b, 6, 6, 6);
-        round2(&b, c, d, a, 7, 7, 7);
-        round2(&a, b, c, d, 8, 8, 8);
-        round2(&d, a, b, c, 9, 9, 9);
-        round2(&c, d, a, b, 10, 10, 10);
-        round2(&b, c, d, a, 11, 11, 11);
-        round2(&a, b, c, d, 12, 12, 12);
-        round2(&d, a, b, c, 13, 13, 13);
-        round2(&c, d, a, b, 14, 14, 14);
-        round2(&b, c, d, a, 15, 15, 15);
+        round2(&a, b, c, d, 0);
+        round2(&d, a, b, c, 1);
+        round2(&c, d, a, b, 2);
+        round2(&b, c, d, a, 3);
+        round2(&a, b, c, d, 4);
+        round2(&d, a, b, c, 5);
+        round2(&c, d, a, b, 6);
+        round2(&b, c, d, a, 7);
+        round2(&a, b, c, d, 8);
+        round2(&d, a, b, c, 9);
+        round2(&c, d, a, b, 10);
+        round2(&b, c, d, a, 11);
+        round2(&a, b, c, d, 12);
+        round2(&d, a, b, c, 13);
+        round2(&c, d, a, b, 14);
+        round2(&b, c, d, a, 15);
 
         //Round 3
-        round3(&a, b, c, d, 0, 0, 0);
-        round3(&d, a, b, c, 1, 1, 1);
-        round3(&c, d, a, b, 2, 2, 2);
-        round3(&b, c, d, a, 3, 3, 3);
-        round3(&a, b, c, d, 4, 4, 4);
-        round3(&d, a, b, c, 5, 5, 5);
-        round3(&c, d, a, b, 6, 6, 6);
-        round3(&b, c, d, a, 7, 7, 7);
-        round3(&a, b, c, d, 8, 8, 8);
-        round3(&d, a, b, c, 9, 9, 9);
-        round3(&c, d, a, b, 10, 10, 10);
-        round3(&b, c, d, a, 11, 11, 11);
-        round3(&a, b, c, d, 12, 12, 12);
-        round3(&d, a, b, c, 13, 13, 13);
-        round3(&c, d, a, b, 14, 14, 14);
-        round3(&b, c, d, a, 15, 15, 15);
+        round3(&a, b, c, d, 0);
+        round3(&d, a, b, c, 1);
+        round3(&c, d, a, b, 2);
+        round3(&b, c, d, a, 3);
+        round3(&a, b, c, d, 4);
+        round3(&d, a, b, c, 5);
+        round3(&c, d, a, b, 6);
+        round3(&b, c, d, a, 7);
+        round3(&a, b, c, d, 8);
+        round3(&d, a, b, c, 9);
+        round3(&c, d, a, b, 10);
+        round3(&b, c, d, a, 11);
+        round3(&a, b, c, d, 12);
+        round3(&d, a, b, c, 13);
+        round3(&c, d, a, b, 14);
+        round3(&b, c, d, a, 15);
 
         //Round 4
-        round4(&a, b, c, d, 0, 0, 0);
-        round4(&d, a, b, c, 1, 1, 1);
-        round4(&c, d, a, b, 2, 2, 2);
-        round4(&b, c, d, a, 3, 3, 3);
-        round4(&a, b, c, d, 4, 4, 4);
-        round4(&d, a, b, c, 5, 5, 5);
-        round4(&c, d, a, b, 6, 6, 6);
-        round4(&b, c, d, a, 7, 7, 7);
-        round4(&a, b, c, d, 8, 8, 8);
-        round4(&d, a, b, c, 9, 9, 9);
-        round4(&c, d, a, b, 10, 10, 10);
-        round4(&b, c, d, a, 11, 11, 11);
-        round4(&a, b, c, d, 12, 12, 12);
-        round4(&d, a, b, c, 13, 13, 13);
-        round4(&c, d, a, b, 14, 14, 14);
-        round4(&b, c, d, a, 15, 15, 15);
+        round4(&a, b, c, d, 0);
+        round4(&d, a, b, c, 1);
+        round4(&c, d, a, b, 2);
+        round4(&b, c, d, a, 3);
+        round4(&a, b, c, d, 4);
+        round4(&d, a, b, c, 5);
+        round4(&c, d, a, b, 6);
+        round4(&b, c, d, a, 7);
+        round4(&a, b, c, d, 8);
+        round4(&d, a, b, c, 9);
+        round4(&c, d, a, b, 10);
+        round4(&b, c, d, a, 11);
+        round4(&a, b, c, d, 12);
+        round4(&d, a, b, c, 13);
+        round4(&c, d, a, b, 14);
+        round4(&b, c, d, a, 15);
     
         *A += a;
         *B += b;
