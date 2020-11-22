@@ -70,7 +70,7 @@ byte *HMAC_MD5_expected[] = {
 void test_HMAC_MD5()
 {
     printf("---Test of HMAC_MD5 start---\n");
-    for(int i = 0; i < 6; i++)
+    for(int i = 0; i < 5; i++)
     {
         byte *key = HMAC_MD5_cases_keys[i];
         byte *data = HMAC_MD5_cases_data[i];
