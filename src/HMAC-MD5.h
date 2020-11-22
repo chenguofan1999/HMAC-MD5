@@ -299,7 +299,7 @@ byte* HMAC_MD5(byte *key, byte *msg)
         // resize to blockSize
         byte tKey[65];
         for(int i = 0; i < strlen(_key); i++) tKey[i] = _key[i];
-        for(int i = strlen(key); i < 65; i++) tKey[i] = 0x00;
+        for(int i = strlen(_key); i < 65; i++) tKey[i] = 0x00;
         tKey[64] = '\0';
         _key = tKey;
     }
@@ -317,7 +317,7 @@ byte* HMAC_MD5(byte *key, byte *msg)
     /*result = MD5(opad ∥ MD5(ipad ∥ message))*/
 
     // 1. t1 = MD5(ipad ∥ message)
-    int len1 = strlen(ipad) + strlen(msg);
+    int len1 = 64 + strlen(msg);
     byte *t1 = (byte *)malloc(len1 + 1);
     t1[0] = '\0';
     strcat(t1, ipad);

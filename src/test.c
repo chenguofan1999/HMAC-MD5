@@ -49,6 +49,9 @@ byte *HMAC_MD5_cases_keys[] = {
     "key",
     "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
     "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+    "asdfghjklqweertyuiopzxcbvcnvbm",
+    "asdfghjklqweertyuiopzxcbvcnvbm123154232534213xczxc",
+    "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
 };
 
 byte *HMAC_MD5_cases_data[] = {
@@ -57,6 +60,9 @@ byte *HMAC_MD5_cases_data[] = {
     "Test Using Larger Than Block-Size Key and Larger Than One Block-Size Data",
     "Hi There",
     "The quick brown fox jumps over the lazy dog",
+    "Computes a Hash-based message authentication code",
+    "Computes a Hash-based message authentication code",
+    "Computes a Hash-based message authentication code (HMAC) using a secret key. A HMAC is a small set of data that helps authenticate the nature of message; it protects the integrity and the authenticity of the message. The secret key is a unique piece of information that is used to compute the HMAC and is known both by the sender and the receiver of the message. This key will vary in length depending on the algorithm that you use."
 };
 
 byte *HMAC_MD5_expected[] = {
@@ -65,12 +71,15 @@ byte *HMAC_MD5_expected[] = {
     "93ec1c6a0bc2889f1e87da3f88f0fca6",
     "5d84b4bd8ce8797ffea3869fc0097e70",
     "02021d12d54c48fcfaf832345ed8904d",
+    "b3f5652c2674dc2e13d9a9ad1c7d33c3",
+    "cdc485560110ab1c90dd54cfcb6065ee",
+    "1b27a4565faedba9b197184020b05b66"
 };
 
 void test_HMAC_MD5()
 {
     printf("---Test of HMAC_MD5 start---\n");
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; i < 8; i++)
     {
         byte *key = HMAC_MD5_cases_keys[i];
         byte *data = HMAC_MD5_cases_data[i];
